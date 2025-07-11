@@ -55,18 +55,33 @@ public class Program
     {
         public string model { get; set; }
         public string plateNumber { get; set; }
+
+
     }
 
     public class Parking
     {
+        
         Dictionary<string, (DateTime entryTime, string model)> parkedCars = new Dictionary<string, (DateTime, string)>();
-        Dictionary<string, (DateTime entry, DateTime exit, double minutes, int hourlyFee, int totalFee)> exitedCars
-         = new Dictionary<string, (DateTime, DateTime, double, int, int)>();
+        Dictionary<string, Cars> parkingStage = new Dictionary<string, Cars>();
 
+
+
+
+
+
+
+
+
+
+
+        
         const int entryCost = 50;
 
         public void carsIn(Cars car)
         {
+
+      
             if (!parkedCars.ContainsKey(car.plateNumber))
             {
                 parkedCars[car.plateNumber] = (DateTime.Now, car.model);
@@ -76,6 +91,12 @@ public class Program
             {
                 Console.WriteLine("Car is already in the parking!");
             }
+
+
+            parkingStage[car.plateNumber] = car;    
+                
+                
+                
         }
 
         public void carsOut(Cars car)
@@ -139,6 +160,9 @@ public class Program
                 Console.WriteLine("-----------------------");
             }
         }
+
+
+        
     }
 }
    
