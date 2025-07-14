@@ -1,168 +1,210 @@
 ﻿using System;
 using System.Collections.Generic;
 
-public class Program
+namespace SimpleParkingApp
 {
-    public static void Main()
+    class Car
     {
-        Parking parking = new Parking();
-        bool running = true;
+        public string PlateNumber { get; set; }
+        public string Model { get; set; }
+        public DateTime EntryTime { get; set; }
+        public DateTime? ExitTime { get; set; }
+        public int TotalCost { get; set; }
 
-        while (running)
+        public void ShowInfo()
         {
-            Console.WriteLine("\n--- PARKING MENU ---");
-            Console.WriteLine("1. Enter a car");
-            Console.WriteLine("2. Exit a car");
-            Console.WriteLine("3. Show exited cars");
-            Console.WriteLine("4. Exit program");
-            Console.Write("Choose an option: ");
-            string choice = Console.ReadLine();
-
-            switch (choice)
+            string exitText;
+            if (ExitTime != null)
             {
-                case "1":
-                    Cars carIn = new Cars();
-                    Console.Write("Enter plate number: ");
-                    carIn.plateNumber = Console.ReadLine();
-                    Console.Write("Enter model: ");
-                    carIn.model = Console.ReadLine();
-                    parking.carsIn(carIn);
-                    break;
-
-                case "2":
-                    Cars carOut = new Cars();
-                    Console.Write("Enter plate number to exit: ");
-                    carOut.plateNumber = Console.ReadLine();
-                    parking.carsOut(carOut);
-                    break;
-
-                case "3":
-                    parking.show();
-                    break;
-
-                case "4":
-                    running = false;
-                    break;
-
-                default:
-                    Console.WriteLine("Invalid option, try again.");
-                    break;
-            }
-        }
-    }
-
-    public class Cars
-    {
-        public string model { get; set; }
-        public string plateNumber { get; set; }
-
-
-    }
-
-    public class Parking
-    {
-        
-        Dictionary<string, (DateTime entryTime, string model)> parkedCars = new Dictionary<string, (DateTime, string)>();
-        Dictionary<string, Cars> parkingStage = new Dictionary<string, Cars>();
-
-
-
-
-
-
-
-
-
-
-
-        
-        const int entryCost = 50;
-
-        public void carsIn(Cars car)
-        {
-
-      
-            if (!parkedCars.ContainsKey(car.plateNumber))
-            {
-                parkedCars[car.plateNumber] = (DateTime.Now, car.model);
-                Console.WriteLine($"[ENTRY] Car with plate {car.plateNumber} entered at {DateTime.Now}, model: {car.model}");
+                exitText = ExitTime.ToString();
             }
             else
             {
-                Console.WriteLine("Car is already in the parking!");
+                exitText = "Still in parking";
             }
 
-
-            parkingStage[car.plateNumber] = car;    
-                
-                
-                
-        }
-
-        public void carsOut(Cars car)
-        {
-            if (parkedCars.ContainsKey(car.plateNumber))
+            string costText;
+            if (TotalCost > 0)
             {
-                var carInfo = parkedCars[car.plateNumber];
-                DateTime entryTime = carInfo.entryTime;
-                string model = carInfo.model;
-                DateTime exitTime = DateTime.Now;
-
-                TimeSpan duration = exitTime - entryTime;
-                int totalHours = (int)Math.Ceiling(duration.TotalHours);
-                int feePerHour = 100;
-                int hourlyFee = totalHours * feePerHour;
-                int totalFee = entryCost + hourlyFee;
-
-                Console.WriteLine($"\n--- CAR EXIT INFO ---");
-                Console.WriteLine($"Plate: {car.plateNumber}");
-                Console.WriteLine($"Model: {model}");
-                Console.WriteLine($"Entry Time: {entryTime}");
-                Console.WriteLine($"Exit Time: {exitTime}");
-                Console.WriteLine($"Total Duration: {duration.TotalMinutes:F1} minutes");
-                Console.WriteLine($"Charged Hours: {totalHours} hour(s)");
-                Console.WriteLine($"Fixed Entry Fee: {entryCost} Toman");
-                Console.WriteLine($"Hourly Fee     : {hourlyFee} Toman");
-                Console.WriteLine($"Total Fee      : {totalFee} Toman");
-                Console.WriteLine("-----------------------\n");
-
-                exitedCars[car.plateNumber] = (entryTime, exitTime, duration.TotalMinutes, hourlyFee, totalFee);
-                parkedCars.Remove(car.plateNumber);
+                costText = TotalCost + " Toman";
             }
             else
             {
-                Console.WriteLine("This car is not found in the parking!");
+                costText = "Not calculated";
             }
+
+            Console.WriteLine("Plate: " + PlateNumber + " - Model: " + Model);
+            Console.WriteLine("Entry time: " + EntryTime);
+            Console.WriteLine("Exit time: " + exitText);
+            Console.WriteLine("Cost: " + costText);
+        }
+    }
+
+    class Parking
+    {
+        private int capacity;
+        private const int FixedFee = 50;
+        private const int RatePerMinute = 1000;
+
+        private Dictionary<string, Car> parkedCars = new Dictionary<string, Car>();
+        private List<Car> exitedCars = new List<Car>();
+
+        public Parking(int capacity)
+        {
+            this.capacity = capacity;
         }
 
-        public void show()
+        public bool EnterCar(Car car)
         {
-            Console.WriteLine("\n=== CARS THAT EXITED THE PARKING ===");
-
-            if (exitedCars.Count == 0)
+            if (parkedCars.Count >= capacity)
             {
-                Console.WriteLine("No exited cars yet.");
+                Console.WriteLine("Parking is full.");
+                return false;
+            }
+
+            if (parkedCars.ContainsKey(car.PlateNumber))
+            {
+                Console.WriteLine("This car is already parked.");
+                return false;
+            }
+
+            car.EntryTime = DateTime.Now;
+            parkedCars[car.PlateNumber] = car;
+
+            Console.WriteLine("Car entered. Fixed fee: " + FixedFee);
+            return true;
+        }
+
+        public bool ExitCar(string plateNumber)
+        {
+            if (!parkedCars.ContainsKey(plateNumber))
+            {
+                Console.WriteLine("Car not found.");
+                return false;
+            }
+
+            Car car = parkedCars[plateNumber];
+            car.ExitTime = DateTime.Now;
+
+            TimeSpan duration = car.ExitTime.Value - car.EntryTime;
+            int totalMinutes = (int)Math.Ceiling(duration.TotalMinutes);
+            car.TotalCost = FixedFee + (totalMinutes * RatePerMinute);
+
+            exitedCars.Add(car);
+            parkedCars.Remove(plateNumber);
+
+            Console.WriteLine("Car exited.");
+            Console.WriteLine("Entry time: " + car.EntryTime);
+            Console.WriteLine("Exit time: " + car.ExitTime);
+            Console.WriteLine("Duration: " + totalMinutes + " minutes");
+            Console.WriteLine("Total cost: " + car.TotalCost + " Toman");
+
+            return true;
+        }
+
+        public void ShowParkedCars()
+        {
+            if (parkedCars.Count == 0)
+            {
+                Console.WriteLine("No cars in parking.");
                 return;
             }
 
-            foreach (var item in exitedCars)
+            Console.WriteLine("Cars currently parked:");
+            foreach (var car in parkedCars.Values)
             {
-                string plate = item.Key;
-                var info = item.Value;
-
-                Console.WriteLine($"Plate: {plate}");
-                Console.WriteLine($"Entry Time: {info.entry}");
-                Console.WriteLine($"Exit Time : {info.exit}");
-                Console.WriteLine($"Total Duration : {info.minutes:F1} minutes");
-                Console.WriteLine($"Hourly Fee Paid: {info.hourlyFee} Toman");
-                Console.WriteLine($"Fixed Entry Fee: {entryCost} Toman");
-                Console.WriteLine($"Total Paid     : {info.totalFee} Toman");
-                Console.WriteLine("-----------------------");
+                car.ShowInfo();
+                Console.WriteLine("------------------");
             }
         }
 
+        public void ShowExitedCars()
+        {
+            if (exitedCars.Count == 0)
+            {
+                Console.WriteLine("No cars have exited yet.");
+                return;
+            }
 
-        
+            Console.WriteLine("Exited cars:");
+            foreach (var car in exitedCars)
+            {
+                car.ShowInfo();
+                Console.WriteLine("------------------");
+            }
+        }
+
+        public void ShowFreeSpaces()
+        {
+            int freeSpaces = capacity - parkedCars.Count;
+            Console.WriteLine("Total capacity: " + capacity + ", Free spaces: " + freeSpaces);
+        }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Parking parking = new Parking(5);
+
+            while (true)
+            {
+                Console.WriteLine("\n***** MENU ******");
+                Console.WriteLine("1. Enter car");
+                Console.WriteLine("2. Exit car");
+                Console.WriteLine("3. Show parked cars");
+                Console.WriteLine("4. Show exited cars");
+                Console.WriteLine("5. Show free spaces");
+                Console.WriteLine("6. Exit program");
+                Console.Write("Choose: ");
+
+                string choice = Console.ReadLine();
+
+                if (choice == "1")
+                {
+                    Console.Write("Enter plate number: ");
+                    string plate = Console.ReadLine();
+
+                    Console.Write("Enter model: ");
+                    string model = Console.ReadLine();
+
+                    Car car = new Car
+                    {
+                        PlateNumber = plate,
+                        Model = model
+                    };
+
+                    parking.EnterCar(car);
+                }
+                else if (choice == "2")
+                {
+                    Console.Write("Enter plate number: ");
+                    string plate = Console.ReadLine();
+
+                    parking.ExitCar(plate);
+                }
+                else if (choice == "3")
+                {
+                    parking.ShowParkedCars();
+                }
+                else if (choice == "4")
+                {
+                    parking.ShowExitedCars();
+                }
+                else if (choice == "5")
+                {
+                    parking.ShowFreeSpaces();
+                }
+                else if (choice == "6")
+                {
+                    Console.WriteLine("Goodbye!");
+                    break;
+                }
+                else
+                {
+                    Console.WriteLine("Invalid option.");
+                }
+            }
+        }
     }
 }
-   
